@@ -59,6 +59,7 @@ fun SettingsScreen(
     settings: AppSettings,
     versionName: String,
     onUpdate: ((AppSettings) -> AppSettings) -> Unit,
+    onOpenAbout: () -> Unit = {},
     bottomPadding: PaddingValues = PaddingValues(0.dp),
 ) {
     var debugAddress by remember(settings.debugAddress) { mutableStateOf(settings.debugAddress) }
@@ -160,7 +161,9 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenAbout() },
                 )
             }
 

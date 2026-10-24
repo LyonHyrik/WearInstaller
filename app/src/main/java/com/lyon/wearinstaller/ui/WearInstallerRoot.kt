@@ -57,12 +57,12 @@ private object Routes {
     const val CONFIRM = "confirm"
     const val JOB = "job"
     const val DEV_OPTIONS = "devOptions"
+    const val ABOUT = "about"
 }
 
-private const val PAGE_COUNT = 3
+private const val PAGE_COUNT = 2
 private const val PAGE_HOME = 0
 private const val PAGE_SETTINGS = 1
-private const val PAGE_ABOUT = 2
 
 @Composable
 fun WearInstallerRoot(
@@ -127,6 +127,7 @@ fun WearInstallerRoot(
                             debugAddress = settings.debugAddress,
                             settings = settings,
                             versionName = versionName,
+                            onOpenAbout = { navController.navigate(Routes.ABOUT) },
                             onPickFile = {
                                 runCatching {
                                     picker.launch(arrayOf("application/vnd.android.package-archive", "*/*"))
@@ -199,6 +200,10 @@ fun WearInstallerRoot(
                             },
                         )
                     }
+
+                    composable(Routes.ABOUT) {
+                        AboutScreen(versionName = versionName)
+                    }
                 }
                 }
 
@@ -225,6 +230,7 @@ private fun TopLevelPager(
     debugAddress: String,
     settings: AppSettings,
     versionName: String,
+    onOpenAbout: () -> Unit,
     onPickFile: () -> Unit,
     onUpdateSettings: ((AppSettings) -> AppSettings) -> Unit,
 ) {
@@ -244,14 +250,12 @@ private fun TopLevelPager(
                     onPickFile = onPickFile,
                     bottomPadding = bottomPadding,
                 )
-                PAGE_SETTINGS -> SettingsScreen(
+                else -> SettingsScreen(
                     settings = settings,
                     versionName = versionName,
                     onUpdate = onUpdateSettings,
+                    onOpenAbout = onOpenAbout,
                     bottomPadding = bottomPadding,
-                )
-                else -> AboutScreen(
-                    versionName = versionName,
                 )
             }
         }

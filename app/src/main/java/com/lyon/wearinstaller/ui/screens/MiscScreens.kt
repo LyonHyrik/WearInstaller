@@ -2,7 +2,9 @@
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -51,7 +53,22 @@ fun AboutScreen(
     val listState = rememberTransformingLazyColumnState()
     val transformationSpec = rememberTransformationSpec()
 
-    // 头像加载移除，避免网络导致的崩溃
+    var avatar by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val url = java.net.URL("https://github.com/LyonHyrik.png")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                conn.inputStream.use { stream ->
+                    avatar = android.graphics.BitmapFactory.decodeStream(stream)
+                }
+            } catch (e: Exception) {
+                avatar = null
+            }
+        }
+    }
 
     ScreenScaffold(
         scrollState = listState,
@@ -90,6 +107,30 @@ fun AboutScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
             item {
+                if (avatar != null) {
+                    Image(
+                        bitmap = avatar!!.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "L",
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+            item {
                 Text(
                     text = "LyonHyrik",
                     style = MaterialTheme.typography.bodyMedium,
@@ -100,7 +141,7 @@ fun AboutScreen(
             }
             item {
                 BodyText(
-                    text = "github.com/LyonHyrik",
+                    text = "github.com/LyonHyrik/WearInstaller",
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp),
