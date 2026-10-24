@@ -3,19 +3,11 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 安装箭头：向下箭头 + 底部托盘 -->
+    <!-- 齿轮：中心圆 + 8 个齿 -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,24 L54,62 M40,48 L54,62 L68,48"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="6"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+        android:pathData="M54,40 A14,14 0 1,0 54,68 A14,14 0 1,0 54,40 Z M54,46 A8,8 0 1,1 54,62 A8,8 0 1,1 54,46 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M30,72 L30,84 L78,84 L78,72"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="6"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+        android:pathData="M50,26 L58,26 L60,34 L48,34 Z M50,74 L58,74 L60,82 L48,82 Z M26,50 L26,58 L34,60 L34,48 Z M74,50 L74,58 L82,60 L82,48 Z M34,30 L40,24 L46,32 L38,38 Z M68,30 L74,24 L80,32 L72,38 Z M34,78 L40,84 L46,76 L38,70 Z M68,78 L74,84 L80,76 L72,70 Z" />
 </vector>
