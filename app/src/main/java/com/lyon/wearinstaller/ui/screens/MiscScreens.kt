@@ -53,16 +53,18 @@ fun AboutScreen(
 
     var avatar by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(Unit) {
-        try {
-            val url = java.net.URL("https://github.com/LyonHyrik.png")
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.connectTimeout = 8000
-            conn.readTimeout = 8000
-            conn.inputStream.use { stream ->
-                val bmp = BitmapFactory.decodeStream(stream)
-                avatar = bmp?.asImageBitmap()
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val url = java.net.URL("https://github.com/LyonHyrik.png")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                conn.inputStream.use { stream ->
+                    val bmp = BitmapFactory.decodeStream(stream)
+                    avatar = bmp?.asImageBitmap()
+                }
+            } catch (_: Throwable) {
             }
-        } catch (_: Throwable) {
         }
     }
 
