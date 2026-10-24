@@ -3,11 +3,20 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 齿轮：中心圆 + 8 个齿 -->
+    <!-- 齿轮主体：8 齿 + 中心孔 -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,40 A14,14 0 1,0 54,68 A14,14 0 1,0 54,40 Z M54,46 A8,8 0 1,1 54,62 A8,8 0 1,1 54,46 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M50,26 L58,26 L60,34 L48,34 Z M50,74 L58,74 L60,82 L48,82 Z M26,50 L26,58 L34,60 L34,48 Z M74,50 L74,58 L82,60 L82,48 Z M34,30 L40,24 L46,32 L38,38 Z M68,30 L74,24 L80,32 L72,38 Z M34,78 L40,84 L46,76 L38,70 Z M68,78 L74,84 L80,76 L72,70 Z" />
+        android:pathData="M54,30
+            L60,30 L62,22 L68,22 L70,30
+            L76,32 L82,26 L88,32 L82,38
+            L84,44 L92,46 L92,52 L84,54
+            L82,60 L88,66 L82,72 L76,66
+            L70,68 L68,76 L62,76 L60,68
+            L54,68 L48,68 L46,76 L40,76
+            L38,68 L32,66 L26,72 L20,66
+            L26,60 L24,54 L16,52 L16,46
+            L24,44 L26,38 L20,32 L26,26
+            L32,32 L38,30 L40,22 L46,22
+            L48,30 L54,30 Z
+            M54,44 A10,10 0 1,0 54,64 A10,10 0 1,0 54,44 Z" />
 </vector>
