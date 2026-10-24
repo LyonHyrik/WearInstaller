@@ -3,21 +3,6 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 外圈齿轮齿 (12齿，细) -->
-    <path android:fillColor="#FFFFFF" android:pathData="M52,6 L56,6 L56,14 L52,14 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M70,9 L74,11 L70,19 L66,17 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M85,20 L87,24 L79,28 L77,24 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M94,36 L94,40 L86,42 L86,38 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M94,68 L94,72 L86,70 L86,66 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M85,84 L87,88 L79,84 L77,80 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M70,97 L74,99 L70,91 L66,89 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M52,94 L56,94 L56,102 L52,102 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M34,97 L38,99 L42,91 L38,89 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M19,84 L21,88 L29,84 L27,80 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M14,68 L14,72 L22,70 L22,66 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M14,36 L14,40 L22,42 L22,38 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M19,20 L21,24 L29,28 L27,24 Z" />
-    <path android:fillColor="#FFFFFF" android:pathData="M34,9 L38,11 L42,19 L38,17 Z" />
     <!-- 外环 -->
     <path
         android:fillColor="#FFFFFF"
@@ -26,5 +11,4 @@
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M54,34 A20,20 0 1,0 54,74 A20,20 0 1,0 54,34 Z M54,42 A12,12 0 1,1 54,66 A12,12 0 1,1 54,42 Z" />
-
 </vector>
