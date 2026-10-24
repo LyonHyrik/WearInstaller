@@ -8,3 +8,7 @@ captures/
 .cxxscreen.png
 tmp_apk.txt
 ui.txt
+
+*.txt
+*.png
+
