@@ -26,14 +26,5 @@
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M54,34 A20,20 0 1,0 54,74 A20,20 0 1,0 54,34 Z M54,42 A12,12 0 1,1 54,66 A12,12 0 1,1 54,42 Z" />
-    <!-- 扳手（对角线） -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M44,44 L64,64 L60,68 L40,48 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M38,40 A6,6 0 1,0 38,52 A6,6 0 1,0 38,40 Z M38,43 A3,3 0 1,1 38,49 A3,3 0 1,1 38,43 Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M66,60 A6,6 0 1,0 78,72 A6,6 0 1,0 66,60 Z M69,63 A3,3 0 1,1 75,69 A3,3 0 1,1 69,63 Z" />
+
 </vector>
