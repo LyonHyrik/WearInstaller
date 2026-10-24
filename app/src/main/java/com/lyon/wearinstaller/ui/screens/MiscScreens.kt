@@ -140,11 +140,65 @@ fun AboutScreen(
             }
             item {
                 Text(
-                    text = "LyonHyrik",
+                    text = "开发者：LyonHyrik",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                FilledTonalButton(
+                    onClick = {
+                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://lyonhyrik.github.io/")))
+                    },
+                    modifier = buttonListItem(transformationSpec),
+                    label = { Text("博客", maxLines = 1) },
+                )
+            }
+            item {
+                FilledTonalButton(
+                    onClick = {
+                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.coolapk.com/u/24533526")))
+                    },
+                    modifier = buttonListItem(transformationSpec),
+                    label = { Text("酷安", maxLines = 1) },
+                )
+            }
+            item {
+                FilledTonalButton(
+                    onClick = {
+                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/LyonHyrik/WearInstaller")))
+                    },
+                    modifier = buttonListItem(transformationSpec),
+                    label = { Text("GitHub", maxLines = 1) },
+                )
+            }
+            item {
+                FilledTonalButton(
+                    onClick = {
+                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://lyonhyrik.github.io/")))
+                    },
+                    modifier = buttonListItem(transformationSpec),
+                    label = { Text("博客", maxLines = 1) },
+                )
+            }
+            item {
+                FilledTonalButton(
+                    onClick = {
+                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.coolapk.com/u/24533526")))
+                    },
+                    modifier = buttonListItem(transformationSpec),
+                    label = { Text("酷安", maxLines = 1) },
+                )
+            }
+            item {
+                FilledTonalButton(
+                    onClick = {
+                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/LyonHyrik/WearInstaller")))
+                    },
+                    modifier = buttonListItem(transformationSpec),
+                    label = { Text("GitHub", maxLines = 1) },
                 )
             }
             item {
