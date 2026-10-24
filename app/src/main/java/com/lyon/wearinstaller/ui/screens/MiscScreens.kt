@@ -51,22 +51,7 @@ fun AboutScreen(
     val listState = rememberTransformingLazyColumnState()
     val transformationSpec = rememberTransformationSpec()
 
-    var avatar by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                val url = java.net.URL("https://github.com/LyonHyrik.png")
-                val conn = url.openConnection() as java.net.HttpURLConnection
-                conn.connectTimeout = 8000
-                conn.readTimeout = 8000
-                conn.inputStream.use { stream ->
-                    val bmp = BitmapFactory.decodeStream(stream)
-                    avatar = bmp?.asImageBitmap()
-                }
-            } catch (_: Throwable) {
-            }
-        }
-    }
+    // 头像加载移除，避免网络导致的崩溃
 
     ScreenScaffold(
         scrollState = listState,
@@ -105,28 +90,13 @@ fun AboutScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
             item {
-                Row(
+                Text(
+                    text = "LyonHyrik",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (avatar != null) {
-                        Image(
-                            bitmap = avatar!!,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape),
-                        )
-                    }
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(
-                        text = "LyonHyrik",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                )
             }
             item {
                 BodyText(
