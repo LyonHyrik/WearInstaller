@@ -174,46 +174,6 @@ fun AboutScreen(
                     label = { Text("GitHub", maxLines = 1) },
                 )
             }
-            item {
-                FilledTonalButton(
-                    onClick = {
-                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://lyonhyrik.github.io/")))
-                    },
-                    modifier = buttonListItem(transformationSpec),
-                    label = { Text("博客", maxLines = 1) },
-                )
-            }
-            item {
-                FilledTonalButton(
-                    onClick = {
-                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.coolapk.com/u/24533526")))
-                    },
-                    modifier = buttonListItem(transformationSpec),
-                    label = { Text("酷安", maxLines = 1) },
-                )
-            }
-            item {
-                FilledTonalButton(
-                    onClick = {
-                        context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/LyonHyrik/WearInstaller")))
-                    },
-                    modifier = buttonListItem(transformationSpec),
-                    label = { Text("GitHub", maxLines = 1) },
-                )
-            }
-            item {
-                FilledTonalButton(
-                    onClick = {
-                        val intent = android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/LyonHyrik/WearInstaller"),
-                        )
-                        context.startActivity(intent)
-                    },
-                    modifier = buttonListItem(transformationSpec),
-                    label = { Text("github.com/LyonHyrik/WearInstaller", maxLines = 1) },
-                )
-            }
         }
     }
 }
