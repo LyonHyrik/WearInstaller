@@ -12,8 +12,8 @@ android {
         applicationId = "com.lyon.wearinstaller"
         minSdk = 25
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 1
+        versionName = "1.0.0"
     }
 
     signingConfigs {
