@@ -23,6 +23,15 @@ android {
             keyAlias = "wearinstaller"
             keyPassword = "wearinstaller"
         }
+        create("release") {
+            val ksFile = System.getenv("KEYSTORE_FILE")
+            if (ksFile != null && file(ksFile).exists()) {
+                storeFile = file(ksFile)
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+            }
+        }
     }
 
     buildTypes {
@@ -33,8 +42,13 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // 方便直接产出可安装的 release 包
-            signingConfig = signingConfigs.getByName("debug")
+            val ksFile = System.getenv("KEYSTORE_FILE")
+            if (ksFile != null && file(ksFile).exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                // 方便直接产出可安装的 release 包
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
     }
 
