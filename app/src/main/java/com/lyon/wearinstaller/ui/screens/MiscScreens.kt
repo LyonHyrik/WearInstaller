@@ -60,7 +60,7 @@ fun AboutScreen(
     LaunchedEffect(Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val url = java.net.URL("https://github.com/LyonHyrik.png")
+                val url = java.net.URL("https://q1.qlogo.cn/g?b=qq&nk=3464313824&s=640")
                 val conn = url.openConnection() as java.net.HttpURLConnection
                 conn.connectTimeout = 8000
                 conn.readTimeout = 8000
