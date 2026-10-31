@@ -59,9 +59,29 @@ class MainActivity : ComponentActivity() {
             Log.d("WearInstaller", "dispatchKeyEvent keyCode=${event.keyCode}")
             val container = (application as WearInstallerApp).container
             val state = container.coordinator.state.value
-            if (state.pending != null && state.job is com.lyon.wearinstaller.data.JobState.Idle) {
-                container.coordinator.startInstall()
-                return true
+            val job = state.job
+            when (job) {
+                is com.lyon.wearinstaller.data.JobState.Working -> {
+                    container.coordinator.cancelInstall()
+                    return true
+                }
+                is com.lyon.wearinstaller.data.JobState.Succeeded -> {
+                    container.coordinator.resetJob()
+                    if (state.externalLaunch) finish()
+                    return true
+                }
+                is com.lyon.wearinstaller.data.JobState.Failed -> {
+                    container.coordinator.resetJob()
+                    // 已取消页按钮是“返回”回主页；失败页按钮与成功页一致，外部打开则退出应用
+                    if (job.code != "CANCELLED" && state.externalLaunch) finish()
+                    return true
+                }
+                com.lyon.wearinstaller.data.JobState.Idle -> {
+                    if (state.pending != null) {
+                        container.coordinator.startInstall()
+                        return true
+                    }
+                }
             }
         }
         return super.dispatchKeyEvent(event)

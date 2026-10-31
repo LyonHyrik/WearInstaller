@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,7 +40,12 @@ data class PendingInstall(val info: ApkInfo, val target: InstallTarget)
 
 sealed interface JobState {
     data object Idle : JobState
-    data class Working(val phase: InstallPhase, val progress: Float?, val detail: String) : JobState
+    data class Working(
+        val phase: InstallPhase,
+        val progress: Float?,
+        val detail: String,
+        val cancelling: Boolean = false,
+    ) : JobState
     data class Succeeded(val label: String, val packageName: String) : JobState
     data class Failed(val code: String?, val detail: String, val needsDevOptions: Boolean) : JobState
 }
@@ -111,6 +117,9 @@ class InstallCoordinator(
     private var job: Job? = null
     private var currentDevice: com.lyon.wearinstaller.adb.AdbDevice? = null
     private var devOptionsOpened: Boolean = false
+    @Volatile private var userCancelled = false
+    // 每次开始安装都自增；取消/重置后旧协程的回调与收尾都被判定为过期，不再写状态
+    @Volatile private var jobGeneration = 0
 
     // ---------------- 输入 ----------------
 
@@ -216,13 +225,18 @@ class InstallCoordinator(
     fun startInstall() {
         val pending = _state.value.pending ?: return
         if (job?.isActive == true) return
+        userCancelled = false
+        val generation = ++jobGeneration
         update { it.copy(job = JobState.Working(InstallPhase.PUSHING, 0f, pending.info.label)) }
         job = scope.launch {
             var device: com.lyon.wearinstaller.adb.AdbDevice? = null
+            // 取消或重置后 generation 会变，旧协程的任何回写都必须丢弃
+            fun stale() = generation != jobGeneration
             try {
                 device = withTimeout(CONNECT_TIMEOUT_MS) { openDevice() }
                 currentDevice = device
                 val profile = withTimeout(SHELL_TIMEOUT_MS) { device.probeProfile() }
+                if (stale()) return@launch
                 update { it.copy(connection = ConnectionStatus.Online(profile), lastError = null) }
 
                 val deleteSource = settings.current.deleteSourceApk
@@ -235,9 +249,11 @@ class InstallCoordinator(
                         huaweiWatchMode = settings.current.huaweiWatchMode,
                         cleanupPaths = sourceToDelete,
                         onPhase = { phase ->
-                            update { it.copy(
-                                job = JobState.Working(phase, null, pending.info.label),
-                            ) }
+                            if (!stale()) {
+                                update { it.copy(
+                                    job = JobState.Working(phase, null, pending.info.label),
+                                ) }
+                            }
                         },
                         onProgress = { sent, total ->
                             val ratio = if (total > 0) sent.toFloat() / total else 0f
@@ -245,7 +261,9 @@ class InstallCoordinator(
                             // 只在整数百分比变化时写状态：一次 push 的回调非常密集，
                             // 全量写会把重组挤爆，进度环反而看起来不动。
                             val percent = (ratio.coerceIn(0f, 1f) * 100).toInt()
-                            if (current is JobState.Working &&
+                            if (!stale() &&
+                                current is JobState.Working &&
+                                !current.cancelling &&
                                 current.phase == InstallPhase.PUSHING &&
                                 current.progress?.let { (it * 100).toInt() } != percent
                             ) {
@@ -260,6 +278,13 @@ class InstallCoordinator(
                 device = null
                 currentDevice = null
 
+                if (stale()) return@launch
+
+                if (userCancelled) {
+                    finishCancelled()
+                    return@launch
+                }
+
                 if (outcome.success) {
                     // 安装成功就清掉本地缓存副本（无条件），顺带把之前遗留的一起清掉
                     purgeIncoming()
@@ -268,6 +293,10 @@ class InstallCoordinator(
                         job = JobState.Succeeded(pending.info.label, pending.info.packageName),
                     ) }
                 } else {
+                    if (userCancelled) {
+                        finishCancelled()
+                        return@launch
+                    }
                     update { it.copy(
                         job = JobState.Failed(outcome.failureCode, outcome.message, false),
                     ) }
@@ -275,9 +304,9 @@ class InstallCoordinator(
             } catch (e: Throwable) {
                 runCatching { device?.close() }
                 currentDevice = null
-                // 用户主动取消不是错误：只有真正的超时/异常才上报失败。
-                if (e.isUserCancellation()) {
-                    update { it.copy(job = JobState.Idle) }
+                if (stale()) return@launch
+                if (userCancelled || e.isUserCancellation()) {
+                    finishCancelled()
                     return@launch
                 }
                 reportFailure(e, inInstall = true, fallbackTitle = pending.info.label)
@@ -286,16 +315,56 @@ class InstallCoordinator(
     }
 
     fun cancelInstall() {
+        val current = _state.value.job
+        if (current !is JobState.Working || current.cancelling) return
+        userCancelled = true
+        // 旧协程从此刻起不允许再写状态（避免把“取消中”顶回“安装中”）
+        val generation = ++jobGeneration
+        val label = _state.value.pending?.info?.label ?: current.detail
+
+        if (current.phase == InstallPhase.PUSHING) {
+            // 还没开始安装：取消只放弃这次传输，直接回到确认页，不再显示“已取消安装”
+            job?.cancel()
+            job = null
+            runCatching { currentDevice?.cancelInstall() }
+            runCatching { currentDevice?.close() }
+            currentDevice = null
+            // 缓存副本要留着，回到确认页后还能重新安装
+            update { it.copy(job = JobState.Idle, externalLaunch = false) }
+            return
+        }
+
+        // 已经开始安装：先显示“取消中”，等安装流程收尾后再落到“已取消安装”
+        update { it.copy(
+            job = JobState.Working(current.phase, current.progress, label, cancelling = true),
+        ) }
         job?.cancel()
+        job = null
+        runCatching { currentDevice?.cancelInstall() }
         runCatching { currentDevice?.close() }
         currentDevice = null
-        job = null
         // 取消后没有保留缓存的必要，否则 cache/incoming 会越攒越大
         purgeIncoming()
-        update { it.copy(job = JobState.Idle, externalLaunch = false) }
+        scope.launch {
+            delay(CANCEL_SETTLE_MS)
+            if (generation == jobGeneration) finishCancelled()
+        }
+    }
+
+    /** 取消流程的唯一落点：只从“取消中”切到“已取消安装”，避免重复写入。 */
+    private fun finishCancelled() {
+        val state = _state.value
+        val current = state.job
+        if (current !is JobState.Working || !current.cancelling) return
+        val label = state.pending?.info?.label ?: current.detail
+        update { it.copy(
+            job = JobState.Failed("CANCELLED", label, false),
+            externalLaunch = false,
+        ) }
     }
 
     fun resetJob() {
+        jobGeneration++
         update { it.copy(job = JobState.Idle, pending = null, externalLaunch = false, needsDevOptions = false) }
     }
 
@@ -460,5 +529,7 @@ class InstallCoordinator(
         const val CONNECT_TIMEOUT_MS = 45_000L
         const val SHELL_TIMEOUT_MS = 30_000L
         const val INSTALL_TIMEOUT_MS = 600_000L
+        /** 「取消中」至少停留这么久，让用户看到取消已经生效，再切到「已取消安装」。 */
+        const val CANCEL_SETTLE_MS = 600L
     }
 }

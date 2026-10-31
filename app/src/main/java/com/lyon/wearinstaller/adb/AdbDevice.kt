@@ -5,10 +5,12 @@ import dadb.AdbConnectException
 import dadb.AdbException as DadbException
 import dadb.AdbKeyPair
 import dadb.AdbStreamOpenException
+import dadb.AdbStream
 import dadb.Dadb
 import dadb.SyncResult
 import okio.source
 import java.io.Closeable
+import java.io.DataInputStream
 import java.io.File
 import java.io.IOException
 
@@ -48,6 +50,8 @@ class AdbClient(private val keyStore: AdbKeyStore) {
 
 /** 一台已连接的设备。 */
 class AdbDevice internal constructor(private val dadb: Dadb) : Closeable {
+    @Volatile
+    private var lastRemotePath: String? = null
 
     /** 读取设备型号等基础信息，用于界面上展示「连上了哪台设备」。 */
     fun probeProfile(): DeviceProfile {
@@ -77,7 +81,7 @@ class AdbDevice internal constructor(private val dadb: Dadb) : Closeable {
     }
 
     /**
-     * 完整安装流程：推送 → （华为 WATCH 模式）停用系统安装器 → pm install → 还原。
+     * 完整安装流程：优先用 shell 通道通过 `cat > /data/local/tmp/...apk` 写入（绕过 sync 协议），失败时回退到 push + pm install。
      */
     fun install(
         localFile: File,
@@ -86,17 +90,43 @@ class AdbDevice internal constructor(private val dadb: Dadb) : Closeable {
         onProgress: (Long, Long) -> Unit,
         cleanupPaths: List<String> = emptyList(),
     ): InstallOutcome {
-        val remotePath = "/data/local/tmp/wearinstaller_${System.currentTimeMillis()}.apk"
         var disabledInstaller = false
+        var remotePath: String? = null
         try {
-            onPhase(InstallPhase.PUSHING)
-            push(localFile, remotePath, onProgress)
-
             if (huaweiWatchMode) {
                 onPhase(InstallPhase.DISABLING_INSTALLER)
                 val disable = shell(DISABLE_INSTALLER_COMMAND)
                 if (disable.exitCode == 0) disabledInstaller = true
             }
+
+            val shellWriteResult = runCatching { installViaShellCat(localFile, onPhase, onProgress) }
+            if (shellWriteResult.isSuccess) {
+                val res = shellWriteResult.getOrThrow()
+                if (res.remotePath != null) {
+                    remotePath = res.remotePath
+                    onPhase(InstallPhase.INSTALLING)
+                    val result = shell("pm install -r -t -g \"$remotePath\"")
+                    val output = result.output
+                    val failure = INSTALL_FAILURE.find(output)
+                    val success = output.contains("Success") && failure == null
+                    if (success) {
+                        return InstallOutcome(success = true, failureCode = null, message = output)
+                    }
+                    val code: String = failure?.value ?: inferFailureCode(output, result.exitCode) ?: ""
+                    return InstallOutcome(
+                        success = false,
+                        failureCode = code,
+                        message = output.ifEmpty { "pm install 未返回结果（退出码 ${result.exitCode}）" },
+                    )
+                }
+            } else {
+                AdbLog.d("shell cat 写入失败，回退到 push+install：${shellWriteResult.exceptionOrNull()?.message}")
+            }
+            onProgress(0, localFile.length())
+
+            onPhase(InstallPhase.PUSHING)
+            remotePath = "/data/local/tmp/wearinstaller_${System.currentTimeMillis()}.apk"
+            push(localFile, remotePath, onProgress)
 
             onPhase(InstallPhase.INSTALLING)
             val result = shell("pm install -r -t -g \"$remotePath\"")
@@ -115,8 +145,6 @@ class AdbDevice internal constructor(private val dadb: Dadb) : Closeable {
                 )
             }
         } finally {
-            // 收尾动作一律限时：连接卡住时不能让界面停在「收尾中」。
-            // 恢复系统安装器有副作用，给足时间；删临时文件失败无所谓。
             if (disabledInstaller) {
                 onPhase(InstallPhase.ENABLING_INSTALLER)
                 if (!runBounded(ENABLE_INSTALLER_COMMAND, RESTORE_TIMEOUT_MS)) {
@@ -124,12 +152,139 @@ class AdbDevice internal constructor(private val dadb: Dadb) : Closeable {
                 }
             }
             onPhase(InstallPhase.CLEANING)
-            // 临时推送文件 + 调用方要求删除的原始 APK（如 /sdcard/Download 里的那个）
-            val targets = (listOf(remotePath) + cleanupPaths)
+            val targets = ((if (remotePath != null) listOf(remotePath) else emptyList()) + cleanupPaths)
                 .filter { it.isNotBlank() }
                 .distinct()
                 .joinToString(" ") { "\"$it\"" }
-            runBounded("rm -f $targets", CLEANUP_TIMEOUT_MS)
+            if (targets.isNotBlank()) {
+                runBounded("rm -f $targets", CLEANUP_TIMEOUT_MS)
+            }
+        }
+    }
+
+    private data class ShellWriteResult(val remotePath: String)
+
+    private fun installViaShellCat(
+        localFile: File,
+        onPhase: (InstallPhase) -> Unit,
+        onProgress: (Long, Long) -> Unit,
+    ): ShellWriteResult {
+        val total = localFile.length()
+        if (total <= 0) throw AdbException("APK 文件为空", hint = AdbException.Hint.PROTOCOL)
+        onPhase(InstallPhase.PUSHING)
+        val remotePath = "/data/local/tmp/wearinstaller_${System.currentTimeMillis()}.apk"
+        lastRemotePath = remotePath
+        val command = "cat > \"$remotePath\""
+        AdbLog.d("shell cat 写入：$command（$total 字节）")
+        val stream = try {
+            dadb.open("shell:$command")
+        } catch (t: Throwable) {
+            throw t.asAdbException(null, null)
+        }
+        try {
+            localFile.inputStream().use { input ->
+                val buf = ByteArray(64 * 1024)
+                var sent: Long = 0
+                val sink = stream.sink
+                while (true) {
+                    val read = input.read(buf)
+                    if (read <= 0) break
+                    sink.write(buf, 0, read)
+                    sink.flush()
+                    sent += read
+                    onProgress(sent, total)
+                }
+                runCatching { sink.flush() }
+            }
+            runCatching { stream.close() }
+            onProgress(total, total)
+            return ShellWriteResult(remotePath)
+        } catch (t: Throwable) {
+            runCatching { stream.close() }
+            throw t
+        }
+    }
+
+    fun cancelInstall(remotePath: String? = null) {
+        val path = remotePath ?: lastRemotePath
+        runCatching {
+            shell("pkill -9 -f 'pm install' 2>/dev/null; pkill -9 -f 'cat >' 2>/dev/null")
+        }
+        if (path != null) {
+            runCatching { shell("rm -f \"$path\"") }
+        }
+    }
+
+    private fun installViaStream(
+        localFile: File,
+        onPhase: (InstallPhase) -> Unit,
+        onProgress: (Long, Long) -> Unit,
+    ): InstallOutcome {
+        val total = localFile.length()
+        if (total <= 0) throw AdbException("APK 文件为空", hint = AdbException.Hint.PROTOCOL)
+        onPhase(InstallPhase.PUSHING)
+        val command = "pm install -S $total -r -t -g"
+        AdbLog.d("流式安装：$command")
+        val stream = try {
+            dadb.open("shell:$command")
+        } catch (t: Throwable) {
+            throw t.asAdbException(null, null)
+        }
+        try {
+            val output = StringBuilder()
+            val outThread = Thread {
+                try {
+                    val source = stream.source
+                    val buf = okio.Buffer()
+                    while (true) {
+                        val read = source.read(buf, 4096)
+                        if (read <= 0) break
+                        output.append(buf.readUtf8())
+                        if (buf.size > 0) {
+                            output.append(buf.readUtf8())
+                        }
+                    }
+                } catch (e: Exception) {
+                    AdbLog.d("流式输出读取结束：${e.message}")
+                }
+            }
+            outThread.isDaemon = true
+            outThread.start()
+
+            localFile.inputStream().use { input ->
+                val buf = ByteArray(64 * 1024)
+                var sent: Long = 0
+                val sink = stream.sink
+                while (true) {
+                    val read = input.read(buf)
+                    if (read <= 0) break
+                    sink.write(buf, 0, read)
+                    sink.flush()
+                    sent += read
+                    onProgress(sent, total)
+                }
+                runCatching { sink.flush() }
+            }
+            runCatching { stream.close() }
+            outThread.join(8000)
+            val outStr = output.toString().trim()
+            AdbLog.d("流式安装输出：$outStr")
+            val failure = INSTALL_FAILURE.find(outStr)
+            val success = outStr.contains("Success") && failure == null
+            return if (success) {
+                onPhase(InstallPhase.INSTALLING)
+                InstallOutcome(success = true, failureCode = null, message = outStr)
+            } else {
+                val code: String = failure?.value ?: inferFailureCode(outStr, -1) ?: ""
+                InstallOutcome(
+                    success = false,
+                    failureCode = code,
+                    message = outStr.ifEmpty { "pm install 流式安装未返回结果" },
+                )
+            }
+        } catch (t: Throwable) {
+            runCatching { stream.close() }
+            throw t
         }
     }
 

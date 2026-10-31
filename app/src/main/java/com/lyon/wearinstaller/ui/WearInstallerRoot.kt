@@ -153,10 +153,6 @@ fun WearInstallerRoot(
                                     coordinator.resetJob()
                                     if (viaIntent) context.findActivity()?.finish() else navController.popBackStack()
                                 },
-                                onRetry = {
-                                    coordinator.resetJob()
-                                    coordinator.startInstall()
-                                },
                                 onBackHome = {
                                     coordinator.resetJob()
                                     navController.popBackStack()
@@ -172,6 +168,7 @@ fun WearInstallerRoot(
                     composable(Routes.JOB) {
                         JobScreen(
                             job = state.job,
+                            info = state.pending?.info,
                             onCancel = {
                                 coordinator.cancelInstall()
                             },

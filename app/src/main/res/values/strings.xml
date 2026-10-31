@@ -41,9 +41,11 @@
     <string name="phase_preparing">准备中</string>
     <string name="phase_pushing">传输中</string>
     <string name="phase_installing">安装中</string>
+    <string name="phase_cancelling">取消中</string>
     <string name="phase_finishing">收尾中</string>
     <string name="install_success">安装成功</string>
     <string name="install_failed">安装失败</string>
+    <string name="install_cancelled">已取消安装</string>
     <string name="action_back_home">返回</string>
 
     <!-- 错误 -->
